@@ -1,26 +1,46 @@
-const router = require('express').Router()
-const {User} = require('./db')
-module.exports = router
+const router = require("express").Router();
+const { User } = require("./db");
+module.exports = router;
 
 const userNotFound = next => {
-  const err = new Error('Not found')
-  err.status = 404
-  next(err)
-}
+  const err = new Error("Not found");
+  err.status = 404;
+  next(err);
+};
 
-router.use('/google', require('./oauth'))
+router.use("/google", require("./oauth"));
 
-router.get('/me', (req, res, next) => {
+router.get("/me", (req, res, next) => {
   if (!req.user) {
-    userNotFound(next)
+    userNotFound(next);
   } else {
     User.findById(req.user.id)
-      .then(user => user ? res.json(user) : userNotFound(next))
-      .catch(next)
+      .then(user => (user ? res.json(user) : userNotFound(next)))
+      .catch(next);
   }
-})
+});
 
-router.put('/login', (req, res, next) => {
+// router.put("/login", async (req, res, next) => {
+//   try {
+//     const user = await User.findOne({
+//       where: {
+//         email: req.body.email,
+//         password: req.body.password
+//       }
+//     });
+//     if (user) {
+//       req.login(user, err => (err ? next(err) : res.json(user)));
+//     } else {
+//       const err = new Error("Incorrect email or password!");
+//       err.status = 401;
+//       throw err;
+//     }
+//   } catch (err) {
+//     next(err);
+//   }
+// });
+
+router.put("/login", (req, res, next) => {
   User.findOne({
     where: {
       email: req.body.email,
@@ -29,18 +49,21 @@ router.put('/login', (req, res, next) => {
   })
     .then(user => {
       if (user) {
-        req.session.userId = user.id
-        res.json(user)
+        // req.session.userId = user.id
+        req.login(user, err => (err ? next(err) : res.json(user)));
       } else {
-        const err = new Error('Incorrect email or password!')
-        err.status = 401
-        next(err)
+        const err = new Error("Incorrect email or password!");
+        err.status = 401;
+        next(err);
       }
     })
-    .catch(next)
-})
+    .catch(next);
+});
 
-router.delete('/logout', (req, res, next) => {
-  req.session.destroy()
-  res.status(204).end()
-})
+router.delete("/logout", (req, res, next) => {
+  req.logout();
+  req.session.destroy(err => {
+    if (err) return next(err);
+    res.status(204).end();
+  });
+});
