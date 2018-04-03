@@ -14,17 +14,34 @@ passport.use(
     },
     async (token, refreshToken, profile, done) => {
       // console.log("---", "in verification callback", profile, "---");
-      const user = (await User.findOrCreate({
-        where: {
-          googleId: profile.id,
-          email: profile.emails[0].value,
-          imageUrl: profile.photos[0].value
-        }
-      }))[0];
-      done(null, user);
+      try {
+        const user = (await User.findOrCreate({
+          where: {
+            googleId: profile.id,
+            email: profile.emails[0].value,
+            imageUrl: profile.photos ? profile.photos[0].value : undefined
+          }
+        }))[0];
+        done(null, user);
+      } catch (error) {
+        done(error)
+      }
     }
   )
 );
+
+passport.serializeUser((user, done) => {
+  done(null, user.id)
+})
+passport.deserializeUser((id, done) => {
+  User.findById(id)
+  .then((user)=>{
+    done(null,user)
+  })
+  .catch((err)=>{
+    done(err)
+  })
+})
 
 Router.get("/", passport.authenticate("google", { scope: "email" }));
 
