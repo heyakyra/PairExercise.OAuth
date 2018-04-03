@@ -1,6 +1,7 @@
 const Router = require("express").Router();
 const passport = require("passport");
 const GoogleStrategy = require("passport-google-oauth").OAuth2Strategy;
+const { User } = require("./db");
 module.exports = Router;
 
 passport.use(
@@ -11,17 +12,24 @@ passport.use(
       clientSecret: "QKiFAE_Xc_amP5CkFHgOS1fw",
       callbackURL: "http://localhost:3000/auth/google/callback"
     },
-    (token, refreshToken, profile, done) => {
-      console.log("---", "in verification callback", profile, "---");
-      done();
+    async (token, refreshToken, profile, done) => {
+      // console.log("---", "in verification callback", profile, "---");
+      const user = (await User.findOrCreate({
+        where: {
+          googleId: profile.id,
+          email: profile.emails[0].value,
+          imageUrl: profile.photos[0].value
+        }
+      }))[0];
+      done(null, user);
     }
   )
 );
 
-Router.get("/google", passport.authenticate("google", { scope: "email" }));
+Router.get("/", passport.authenticate("google", { scope: "email" }));
 
 Router.get(
-  "/google/callback",
+  "/callback",
   passport.authenticate("google", {
     successRedirect: "/home",
     failureRedirect: "/"
